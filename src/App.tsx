@@ -12,7 +12,17 @@ interface Element {
   panelId: string;
 }
 
+interface PanelData {
+  id: string;
+  title: string;
+}
+
 const App: React.FC = () => {
+  const [panels, setPanels] = useState<PanelData[]>([
+    { id: 'panel1', title: 'Panel 1' },
+    { id: 'panel2', title: 'Panel 2' },
+  ]);
+
   const [elements, setElements] = useState<Element[]>([
     { id: 'element1', label: 'Element 1', top: 10, left: 10, panelId: 'panel1' },
     { id: 'element2', label: 'Element 2', top: 70, left: 10, panelId: 'panel1' },
@@ -38,25 +48,19 @@ const App: React.FC = () => {
       setElements((prevElements) => {
         return prevElements.map((element) => {
           if (element.id === active.id) {
-            const panelRect = (over.id === 'panel1' || over.id === 'panel2')
-              ? (document.getElementById(over.id as string)?.getBoundingClientRect() as DOMRect)
-              : (document.getElementById(element.panelId)?.getBoundingClientRect() as DOMRect);
+            const targetPanelId = panels.find(panel => panel.id === over.id)?.id || element.panelId;
+            const panelRect = document.getElementById(targetPanelId)?.getBoundingClientRect();
 
-            const newTop = event.over?.rect.top
-              ? Math.max(0, event.over.rect.top - panelRect.top + event.delta.y)
-              : element.top;
-            const newLeft = event.over?.rect.left
-              ? Math.max(0, event.over.rect.left - panelRect.left + event.delta.x)
-              : element.left;
+            if (!panelRect) return element;
 
-            console.log(`Dropped element: ${element.id}`);
-            console.log(`New position - Top: ${newTop}, Left: ${newLeft}`);
+            const newTop = Math.max(0, event.over.rect.top - panelRect.top + event.delta.y);
+            const newLeft = Math.max(0, event.over.rect.left - panelRect.left + event.delta.x);
 
             return {
               ...element,
               top: newTop,
               left: newLeft,
-              panelId: (over.id === 'panel1' || over.id === 'panel2') ? over.id : element.panelId,
+              panelId: targetPanelId,
             };
           }
           return element;
@@ -69,21 +73,36 @@ const App: React.FC = () => {
 
   const activeElement = elements.find((element) => element.id === activeId);
 
+  const addPanel = () => {
+    const newPanelId = `panel${panels.length + 1}`;
+    setPanels([...panels, { id: newPanelId, title: `Panel ${panels.length + 1}` }]);
+  };
+
+  const addElement = (panelId: string) => {
+    const newElementId = `element${elements.length + 1}`;
+    setElements([...elements, {
+      id: newElementId,
+      label: `Element ${elements.length + 1}`,
+      top: 10,
+      left: 10,
+      panelId: panelId,
+    }]);
+  };
+
   return (
     <div className="app">
       <h1>Multi-Panel Drag and Drop</h1>
+      <button onClick={addPanel}>Add Panel</button>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="panels-container">
-          <Panel id="panel1" title="Panel 1">
-            {elements.filter(el => el.panelId === 'panel1').map(element => (
-              <DraggableElement key={element.id} {...element} />
-            ))}
-          </Panel>
-          <Panel id="panel2" title="Panel 2">
-            {elements.filter(el => el.panelId === 'panel2').map(element => (
-              <DraggableElement key={element.id} {...element} />
-            ))}
-          </Panel>
+          {panels.map((panel) => (
+            <Panel key={panel.id} id={panel.id} title={panel.title}>
+              {elements.filter(el => el.panelId === panel.id).map(element => (
+                <DraggableElement key={element.id} {...element} />
+              ))}
+              <button onClick={() => addElement(panel.id)}>Add Element</button>
+            </Panel>
+          ))}
         </div>
         <DragOverlay>
           {activeId ? <DraggableElement {...(activeElement as Element)} /> : null}
