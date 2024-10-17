@@ -53,13 +53,24 @@ const App: React.FC = () => {
 
             if (!panelRect) return element;
 
-            const newTop = Math.max(0, event.over.rect.top - panelRect.top + event.delta.y);
-            const newLeft = Math.max(0, event.over.rect.left - panelRect.left + event.delta.x);
+            // Calculate new position relative to the panel
+            const newTop = Math.max(0, event.delta.y + element.top);
+            const newLeft = Math.max(0, event.delta.x + element.left);
+
+            // Ensure the element stays within the panel boundaries
+            const maxTop = panelRect.height - 50; // Assuming element height is 50px
+            const maxLeft = panelRect.width - 100; // Assuming element width is 100px
+
+            const clampedTop = Math.min(Math.max(0, newTop), maxTop);
+            const clampedLeft = Math.min(Math.max(0, newLeft), maxLeft);
+
+            console.log(`Dropped element: ${element.id}`);
+            console.log(`New position - Top: ${clampedTop}, Left: ${clampedLeft}`);
 
             return {
               ...element,
-              top: newTop,
-              left: newLeft,
+              top: clampedTop,
+              left: clampedLeft,
               panelId: targetPanelId,
             };
           }
